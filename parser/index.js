@@ -9,22 +9,24 @@ const getRegForWord = (word) => new RegExp(`(^|\\b)${escapeRegExp(word)}(\\b|$)`
 
 
 
-const toBlackList = (str, blacklist) => {
-    for (let i = 0; i < blacklist.length; i++) {
-        const word = blacklist[i];
-        // const wR = getRegForWord(word);
-        // const isMatch = str.match(wR);
-        const isMatch = knuthMorrisPratt(str, word);
+const toBlackList = ({ str, blackList, kmp }) => {
+    let isMatch = false;
 
-        if (isMatch !== -1) {
-            return true;
+    for (let i = 0; i < blackList.length; i++) {
+        const word = blackList[i];
+        const wR = getRegForWord(word);
+        const found = kmp ? knuthMorrisPratt(str, word) !== -1 : str.match(wR); 
+
+        if (found) {
+            isMatch = true;
+            break;
         }
     }
 
-    return false;
+    return isMatch;
 }
 
-const parseData = async () => {
+const parseData = async (kmp) => {
     return new Promise ((resolve) => {
         let data = [];
 
@@ -40,7 +42,7 @@ const parseData = async () => {
             .pipe(csv())
             .on('data', (csvrow) => {
                 const str = csvrow['DESC'];
-                const isBlackListed = toBlackList(str, blackList);
+                const isBlackListed = toBlackList({ str, blackList, kmp });
 
                 if (!isBlackListed) {
                     data = [...data, csvrow];
