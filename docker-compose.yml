@@ -1,9 +1,57 @@
+version: "3.8"
+
 services:
+  localstack:
+    container_name: localstack
+    image: localstack/localstack
+    hostname: localstack
+    networks:
+      - localstack-net
+    ports:
+      - "4566:4566"
+    expose:
+      - "4566"
+    environment:
+      - AWS_DEFAULT_REGION=eu-north-1
+      - AWS_SECRET_KEY=dummy
+      - AWS_SECRET_ACCESS_KEY=dummy
+      - EDGE_PORT=4566
+      - SERVICES=dynamodb:4566
+
+    volumes:
+      - "${TMPDIR:-/tmp}/localstack:/tmp/localstack"
+      - "/var/run/docker.sock:/var/run/docker.sock"
+    healthcheck:
+      test:
+        - CMD
+        - bash
+        - -c
+        - awslocal dynamodb list-tables
+      interval: 5s
+      timeout: 10s
+      start_period: 10s
   web:
     build: .
-    command: npm run dev
+    environment:
+      - AWS_DEFAULT_REGION=eu-north-1
+      - AWS_SECRET_KEY=dummy
+      - AWS_SECRET_ACCESS_KEY=dummy
+      - EDGE_PORT=4566
+    depends_on:
+      localstack:
+          condition: service_healthy
+    command: >
+     sh -c "yarn &&
+            yarn dev"
     volumes:
       - .:/usr/src/app/
       - /usr/src/app/node_modules
     ports:
       - "3000:3000"
+    networks:
+      - localstack-net
+networks:
+  localstack-net:
+    external: false
+    driver: bridge
+    name: localstack-net
